@@ -119,6 +119,25 @@ function CustomerOrder() {
 
                             <span className="font-medium">{(order.cartItems.reduce((total, item) => total + (item.price * item.qty), 0))}</span>
                         </div>
+                        {order.verified ?
+                            (
+                                <div className="flex justify-end p-4">
+                                    <button className="bg-green-500 text-white font-medium py-2 px-4 rounded-lg">
+                                        Accepted
+                                    </button>
+                                </div>
+                            )
+                            :
+                            (
+                                <div className="flex justify-end p-4">
+                                    <button className="bg-red-400 text-white font-medium py-2 px-4 rounded-lg">
+                                        Not  Accepted
+                                    </button>
+                                </div>
+                            )
+                        }
+                        {order.pickup && (<div className="text-center bg-blue-200">Delivery Boy Assigned : {order.deliveryBoy}</div>)}
+
                     </div>
                 </div>
             </div>

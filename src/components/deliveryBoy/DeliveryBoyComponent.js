@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react'
-import { getDatabase, ref, onValue, child } from "firebase/database";
+import { ref, orderByChild, equalTo, get, off, query, update, remove, onValue } from "firebase/database";
+
 import { database } from "../../firebaseConfig";
 import Header from '../Header';
 import DeliveryBoyHeader from './DeliveryBoyHeader';
 
 function DeliveryBoyComponent() {
     const [restaurant, setRestaurant] = useState([])
+    const [userEmail, setUserEmail] = useState("")
+
     function formatDate(timestamp) {
         const date = new Date(timestamp);
         const day = date.getDate();
@@ -16,7 +19,6 @@ function DeliveryBoyComponent() {
     useEffect(() => {
 
         const dbRef = ref(database);
-
         onValue(dbRef, (snapshot) => {
             const data = snapshot.val();
             console.log(data)
@@ -40,7 +42,131 @@ function DeliveryBoyComponent() {
                 localStorage.setItem("restaurants", JSON.stringify(restaurants))
             }
         });
-    }, []);
+    }, [setUserEmail]);
+
+    const updateOrderVerified = (orderId, restaurantEmail, customerEmail, verifiedStatus) => {
+
+        const usersRef = ref(database, "users");
+
+        get(usersRef)
+            .then((snapshot) => {
+                if (snapshot.exists()) {
+                    const users = snapshot.val();
+                    let userId = null;
+
+                    // Find the user with the provided email
+                    for (const key in users) {
+                        if (users[key].email === restaurantEmail) {
+                            userId = key;
+                            break;
+                        }
+                    }
+
+                    if (userId) {
+                        const ordersRef = ref(database, `users/${userId}/orders/${orderId}`);
+                        console.log(ordersRef)
+                        get(ordersRef)
+                            .then((orderSnapshot) => {
+                                if (orderSnapshot.exists()) {
+                                    const orderData = orderSnapshot.val();
+                                    // Update the verified field to true
+                                    const deliveryBoyRest = localStorage.getItem("email")
+
+                                    const usernameRest = deliveryBoyRest.split("@")[0]
+                                    orderData.pickup = verifiedStatus;
+                                    orderData.deliveryBoy = usernameRest;
+                                    // Update the order
+                                    update(ref(database), {
+                                        [`users/${userId}/orders/${orderId}`]: orderData,
+                                    })
+                                        .then(() => {
+                                            console.log("Order verified successfully.");
+                                            const usersRef = ref(database, "users");
+
+                                            get(usersRef)
+                                                .then((snapshot) => {
+                                                    if (snapshot.exists()) {
+                                                        const users = snapshot.val();
+                                                        let userId = null;
+
+                                                        // Find the user with the provided email
+                                                        for (const key in users) {
+                                                            if (users[key].email === customerEmail) {
+                                                                userId = key;
+                                                                break;
+                                                            }
+                                                        }
+
+                                                        if (userId) {
+                                                            const ordersRef = ref(database, `users/${userId}/orders/${orderId}`);
+                                                            console.log(ordersRef)
+                                                            get(ordersRef)
+                                                                .then((orderSnapshot) => {
+                                                                    if (orderSnapshot.exists()) {
+                                                                        const orderData = orderSnapshot.val();
+                                                                        // Update the verified field to true
+                                                                        const deliveryBoy = localStorage.getItem("email")
+                                                                        const username = deliveryBoy.split("@")[0]
+                                                                        orderData.pickup = verifiedStatus;
+                                                                        orderData.deliveryBoy = username;
+
+
+
+                                                                        // Update the order
+                                                                        update(ref(database), {
+                                                                            [`users/${userId}/orders/${orderId}`]: orderData,
+                                                                        })
+                                                                            .then(() => {
+                                                                                console.log("Order verified successfully.");
+
+                                                                                setUserEmail("sda")
+
+                                                                            })
+                                                                            .catch((error) => {
+                                                                                console.error("Failed to update order:", error);
+                                                                            });
+                                                                    } else {
+                                                                        console.error("Order not found.");
+                                                                    }
+                                                                })
+                                                                .catch((error) => {
+                                                                    console.error("Error retrieving order:", error);
+                                                                });
+                                                        } else {
+                                                            console.error("User not found for the provided email.");
+                                                        }
+                                                    } else {
+                                                        console.error("No users found in the database.");
+                                                    }
+                                                })
+                                                .catch((error) => {
+                                                    console.error("Error retrieving users:", error);
+                                                });
+                                            setUserEmail("sda")
+
+                                        })
+                                        .catch((error) => {
+                                            console.error("Failed to update order:", error);
+                                        });
+                                } else {
+                                    console.error("Order not found.");
+                                }
+                            })
+                            .catch((error) => {
+                                console.error("Error retrieving order:", error);
+                            });
+                    } else {
+                        console.error("User not found for the provided email.");
+                    }
+                } else {
+                    console.error("No users found in the database.");
+                }
+            })
+            .catch((error) => {
+                console.error("Error retrieving users:", error);
+            });
+    };
+    // Example
 
     const renderCartItems = (cartItems) => {
         return cartItems.map((item) => (
@@ -68,28 +194,51 @@ function DeliveryBoyComponent() {
 
     const renderOrders = () => {
         return restaurant.map((order) => (
-            <div key={order.id} className="bg-white shadow rounded-lg mb-4">
-                <div className="p-4">
-                    <h2 className="text-xl font-medium mb-2">Order #{order.id}</h2>
-                    <h2 className="text-xl font-medium mb-2">Date : {formatDate(order.date)}</h2>
+            <>
+                {order.verified && (
+                    <div key={order.id} className="bg-white shadow rounded-lg mb-4">
+                        <div className="p-4">
+                            <h2 className="text-xl font-medium mb-2">Order #{order.id}</h2>
+                            <h2 className="text-xl font-medium mb-2">Date : {formatDate(order.date)}</h2>
 
-                    <div className="mb-2">
-                        <span className="font-medium">Shipping address:</span>{' '}
-                        {`${order.fullName}, ${order.streetAddress} ${order.streetNumber}, ${order.city}, ${order.state} ${order.zipCode}`}
-                    </div>
-                    <div className="border-t border-gray-300 mt-4">
-                        {renderCartItems(order.cartItems)}
-                        <span className="font-medium mr-2">Restaurant Address:</span>
-                        <span className="font-medium">{(order.cartItems.reduce((total, item) => (item.restaurantAddress), " "))}</span>
-                        <div className="py-2 flex justify-end">
-                            <span className="font-medium mr-2">Total:</span>
+                            <div className="mb-2">
+                                <span className="font-medium">Shipping address:</span>{' '}
+                                {`${order.fullName}, ${order.streetAddress} ${order.streetNumber}, ${order.city}, ${order.state} ${order.zipCode}`}
+                            </div>
+                            <div className="border-t border-gray-300 mt-4">
+                                {renderCartItems(order.cartItems)}
+                                <span className="font-medium mr-2">Restaurant Address:</span>
+                                <span className="font-medium">{(order.cartItems.reduce((total, item) => (item.restaurantAddress), " "))}</span>
+                                <div className="py-2 flex justify-end">
+                                    <span className="font-medium mr-2">Total:</span>
 
 
-                            <span className="font-medium">{(order.cartItems.reduce((total, item) => total + (item.price * item.qty), 0))}</span>
+                                    <span className="font-medium">{(order.cartItems.reduce((total, item) => total + (item.price * item.qty), 0))}</span>
+                                </div>
+                            </div>
                         </div>
+                        {order.pickup ?
+                            (
+                                <div className="flex justify-end p-4">
+                                    <button className="bg-orange-500 text-white font-medium py-2 px-4 rounded-lg">
+                                        Accepted
+                                    </button>
+                                </div>
+                            )
+                            :
+                            (
+                                <div className="flex justify-end p-4">
+                                    <button className="bg-blue-500 text-white font-medium py-2 px-4 rounded-lg mr-2" onClick={() => { updateOrderVerified(order.id, order.restaurantEmail, order.email, true) }}
+                                    >
+                                        Accept Pickup
+                                    </button>
+
+                                </div>
+                            )
+                        }
                     </div>
-                </div>
-            </div>
+                )}
+            </>
         ));
     };
 

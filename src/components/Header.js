@@ -46,13 +46,16 @@ function Header() {
 
                     </ul>
 
-                    <div className='flex flex-row'>
-                        <img
-                            src="https://cdn3.iconfinder.com/data/icons/essential-rounded/64/Rounded-31-512.png"
-                            alt="User avatar"
-                            className="w-8 h-8 rounded-full"
-                        />
-                        <span className="ml-2 font-medium">{userName}</span>
+                    <div className='flex flex-row' >
+                        <a href="/editProfile">
+                            <img
+                                src="https://cdn3.iconfinder.com/data/icons/essential-rounded/64/Rounded-31-512.png"
+                                alt="User avatar"
+                                className="w-8 h-8 rounded-full"
+                            />
+                            <span className="ml-2 font-medium">{userName}</span>
+                        </a>
+
                     </div>
 
 

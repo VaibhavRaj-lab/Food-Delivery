@@ -68,6 +68,9 @@ function AlternateHeader() {
                                     <a href="/customerOrder">Orders</a>
                                 </li>
                                 <li className="px-4 py-2 hover:bg-gray-100">
+                                    <a href="/editProfile">Profile</a>
+                                </li>
+                                <li className="px-4 py-2 hover:bg-gray-100">
                                     <a onClick={logoutHandler}>Logout</a>
                                 </li>
                             </ul>

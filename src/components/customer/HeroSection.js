@@ -1,6 +1,14 @@
 import React from 'react';
 
 function HeroSection() {
+
+    const handleClick = () => {
+        const scrollOffset = window.innerHeight * 0.55;
+        window.scrollTo({
+            top: scrollOffset,
+            behavior: 'smooth' // Optional: Adds smooth scrolling animation
+        });
+    };
     return (
         <div className="relative h-96">
             <div className="absolute inset-0 z-0">
@@ -20,7 +28,7 @@ function HeroSection() {
                 <h2 className="text-3xl font-bold text-white tracking-tight mb-8 text-center">
                     Wishlists curated by TASTE.
                 </h2>
-                <button className="bg-white text-black font-semibold px-8 py-4 rounded-lg shadow-lg hover:shadow-xl hover:bg-gray-100">
+                <button onClick={handleClick} className="bg-white text-black font-semibold px-8 py-4 rounded-lg shadow-lg hover:shadow-xl hover:bg-gray-100">
                     Order Now
                 </button>
             </div>

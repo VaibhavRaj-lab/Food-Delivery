@@ -3,9 +3,15 @@ import CustomerHeader from "./CustomerHeader";
 import AlternateHeader from "./AlternateHeader";
 import { auth, database } from '../../firebaseConfig';
 import { ref, set, query, get, orderByChild, equalTo, child, push } from 'firebase/database';
-import { useSubmit } from "react-router-dom";
-const Checkout = () => {
+import { useNavigate, useSubmit } from "react-router-dom";
+import axios from "axios";
 
+
+import { loadStripe } from '@stripe/stripe-js';
+
+
+const Checkout = () => {
+    const navigate = useNavigate
     const [cartItems, setCartItems] = useState([]);
     const [totalPrice, setTotalPrice] = useState(0);
     const [formData, setFormData] = useState({
@@ -21,8 +27,11 @@ const Checkout = () => {
     const [eroor, setError] = useState(false)
     // const history = useHistory();
 
+
+
     useEffect(() => {
         const items = JSON.parse(localStorage.getItem("cartItems"));
+
         if (items) {
             setCartItems(items);
             let total = 0;
@@ -43,9 +52,10 @@ const Checkout = () => {
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
+
         // Submit form data
-        const email = localStorage.getItem("email")
-        console.log(formData);
+        const email = localStorage.getItem("email");
+
         // Clear form data
         setFormData({
             fullName: "",
@@ -55,61 +65,55 @@ const Checkout = () => {
             state: "",
             zipCode: "",
             date: Date.now()
-
         });
-        const billRef = query(ref(database, 'users'), orderByChild('email'), equalTo(email))
-        console.log(get(billRef))
+
+        const billRef = query(ref(database, 'users'), orderByChild('email'), equalTo(email));
         const userSnapshot = await get(billRef);
         const obj = userSnapshot.val();
-        console.log(obj)
-        console.log(userSnapshot.val())
         const userId = Object.keys(userSnapshot.val())[0];
-        console.log(userId)
-        const userBillRef = child(billRef, userId + '/orders');
+        const userBillRef = child(billRef, `${userId}/orders`);
 
-        console.log(userBillRef)
-        await push(userBillRef, { ...formData, cartItems });
+        // Save the order in the user's orders
+        const orderId = push(userBillRef, { ...formData, cartItems }).key;
 
-        const restaurantemail = cartItems[0].email
-        const restaurantId = cartItems[0].restaurantId
-        const userQuery = query(ref(database, 'users'), orderByChild('email'), equalTo(restaurantemail));
+        const restaurantEmail = cartItems[0].email;
+        const userQuery = query(ref(database, 'users'), orderByChild('email'), equalTo(restaurantEmail));
 
-        // Execute the query
-        get(userQuery).then((snapshot) => {
-            if (snapshot.exists()) {
-                // Get the user object from the snapshot
-                const userId = Object.keys(snapshot.val())[0]; // Assumes only one user with the given email
-                console.log(userId)
-                const user = snapshot.val()[userId];
-                console.log(user)
+        // Retrieve the restaurant's user ID
+        const restaurantSnapshot = await get(userQuery);
+        const restaurantId = Object.keys(restaurantSnapshot.val())[0];
 
+        // Save the order in the restaurant's orders with the same ID
+        const restaurantOrderRef = ref(database, `users/${restaurantId}/orders/${orderId}`);
+        await set(restaurantOrderRef, { cartItems, date: Date.now(), email, restaurantEmail });
+        console.log(cartItems)
+        await handleCheckout()
 
-                // Get a reference to the restaurant object
-                const restaurantRef = child(ref(database, 'users'), `${userId}`);
-                console.log(restaurantRef)
+        setError(true);
 
-                // Add a new menu object to the restaurant
-                const menuRef = push(child(restaurantRef, 'orders'));
+        navigate("/customerOrder");
 
-                set(menuRef, { cartItems, date: Date.now() });
-            }
-        }).catch(err => {
-            console.log(err)
-        })
-        console.log(restaurantemail)
-        console.log(restaurantId)
-        console.log(userBillRef)
-        setError(true)
-        setErrorMessage("Order Successfull ")
         // Clear cart items
         localStorage.removeItem("cartItems");
-        // setCartItems([]);
         setTotalPrice(0);
-        // // Redirect to home page
-        // history.push("/");
+
     };
 
+    const handleCheckout = async () => {
+        try {
+            // Replace 'YOUR_SERVER_ENDPOINT' with your actual server endpoint
+            const response = await axios.post('http://localhost:5001/checkout', {
+                items: cartItems,
+                totalPrice: totalPrice,
+            });
 
+            // Redirect the user to the Stripe Checkout page
+            window.location.href = response.data.redirectUrl;
+        } catch (error) {
+            // Handle error
+            console.error('Error during checkout:', error);
+        }
+    };
     return (
         <>
             <>
@@ -216,14 +220,15 @@ const Checkout = () => {
                                     <p className="text-sm text-gray-400">{item.qty} x {item.price}</p>
                                 </div>
                             </div>
-                            <p className="text-sm font-medium">${item.qty * item.price}</p>
+                            <p className="text-sm font-medium">₹{item.qty * item.price}</p>
                         </div>
                     ))}
                     <div className="flex flex-row items-center justify-between mt-4">
                         <p className="text-sm font-medium">Total</p>
-                        <p className="text-sm font-medium">${totalPrice}</p>
+                        <p className="text-sm font-medium">₹ {totalPrice}</p>
                     </div>
-                    <button className="bg-green-500 text-white py-2 px-4 rounded-md mt-4" onClick={handleFormSubmit}>Checkout</button>
+                    <button className="bg-green-500 text-white py-2 px-4 rounded-md mt-4" onClick={handleFormSubmit}>CHECKOUT</button>
+
                     {errorMessage && <div style={{
                         marginTop: "20px",
                         padding: "10px",
@@ -232,6 +237,7 @@ const Checkout = () => {
                         backgroundColor: "#f8d7da",
                         borderColor: "#f5c6cb",
                     }} >{errorMessage}</div>}
+
                 </div>
             </div>
 

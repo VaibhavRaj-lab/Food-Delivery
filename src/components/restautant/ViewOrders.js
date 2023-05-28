@@ -1,6 +1,6 @@
 import React from 'react'
 import { useState, useEffect } from "react";
-import { ref, orderByChild, equalTo, get, off, query } from "firebase/database";
+import { ref, orderByChild, equalTo, get, off, query, update, remove } from "firebase/database";
 import { database } from "../../firebaseConfig";
 import { useSubmit } from 'react-router-dom';
 import Header from '../Header';
@@ -11,13 +11,17 @@ import Header from '../Header';
 
 function ViewOrder() {
     const [orders, setOrders] = useState([])
+    const [userEmail, setUserEmail] = useState("")
+    const [customerEmail, setCustomerEmail] = useState("")
     useEffect(() => {
-        const userEmail = localStorage.getItem("email");
+        const userEmail1 = JSON.stringify(localStorage.getItem("email"));
+        console.log(userEmail1)
+        setUserEmail(userEmail1)
 
         const dbRef = ref(database);
         console.log(dbRef)
-
-        const restaurantRef = query(ref(database, 'users'), orderByChild('email'), equalTo(userEmail))
+        const userEmail2 = localStorage.getItem("email")
+        const restaurantRef = query(ref(database, 'users'), orderByChild('email'), equalTo(userEmail2))
         console.log(restaurantRef)
 
         const fetchRestaurants = async () => {
@@ -66,8 +70,160 @@ function ViewOrder() {
         return () => {
             off(restaurantRef);
         };
-    }, []);
+    }, [userEmail]);
 
+
+    const updateOrderVerified = (orderId, verifiedStatus) => {
+        const userEmail3 = localStorage.getItem("email")
+        const usersRef = ref(database, "users");
+
+        get(usersRef)
+            .then((snapshot) => {
+                if (snapshot.exists()) {
+                    const users = snapshot.val();
+                    let userId = null;
+
+                    // Find the user with the provided email
+                    for (const key in users) {
+                        if (users[key].email === userEmail3) {
+                            userId = key;
+                            break;
+                        }
+                    }
+
+                    if (userId) {
+                        const ordersRef = ref(database, `users/${userId}/orders/${orderId}`);
+                        console.log(ordersRef)
+                        get(ordersRef)
+                            .then((orderSnapshot) => {
+                                if (orderSnapshot.exists()) {
+                                    const orderData = orderSnapshot.val();
+                                    // Update the verified field to true
+                                    orderData.verified = verifiedStatus;
+                                    const customerEmail = orderData.email
+                                    console.log(customerEmail)
+                                    // Update the order
+                                    update(ref(database), {
+                                        [`users/${userId}/orders/${orderId}`]: orderData,
+                                    })
+                                        .then(() => {
+                                            console.log("Order verified successfully.");
+                                            const usersRef = ref(database, "users");
+
+                                            get(usersRef)
+                                                .then((snapshot) => {
+                                                    if (snapshot.exists()) {
+                                                        const users = snapshot.val();
+                                                        let userId = null;
+
+                                                        // Find the user with the provided email
+                                                        for (const key in users) {
+                                                            if (users[key].email === customerEmail) {
+                                                                userId = key;
+                                                                break;
+                                                            }
+                                                        }
+
+                                                        if (userId) {
+                                                            const ordersRef = ref(database, `users/${userId}/orders/${orderId}`);
+                                                            console.log(ordersRef)
+                                                            get(ordersRef)
+                                                                .then((orderSnapshot) => {
+                                                                    if (orderSnapshot.exists()) {
+                                                                        const orderData = orderSnapshot.val();
+                                                                        // Update the verified field to true
+                                                                        orderData.verified = verifiedStatus;
+
+
+                                                                        // Update the order
+                                                                        update(ref(database), {
+                                                                            [`users/${userId}/orders/${orderId}`]: orderData,
+                                                                        })
+                                                                            .then(() => {
+                                                                                console.log("Order verified successfully.");
+
+                                                                                setUserEmail("sda")
+
+                                                                            })
+                                                                            .catch((error) => {
+                                                                                console.error("Failed to update order:", error);
+                                                                            });
+                                                                    } else {
+                                                                        console.error("Order not found.");
+                                                                    }
+                                                                })
+                                                                .catch((error) => {
+                                                                    console.error("Error retrieving order:", error);
+                                                                });
+                                                        } else {
+                                                            console.error("User not found for the provided email.");
+                                                        }
+                                                    } else {
+                                                        console.error("No users found in the database.");
+                                                    }
+                                                })
+                                                .catch((error) => {
+                                                    console.error("Error retrieving users:", error);
+                                                });
+                                            setUserEmail("sda")
+
+                                        })
+                                        .catch((error) => {
+                                            console.error("Failed to update order:", error);
+                                        });
+                                } else {
+                                    console.error("Order not found.");
+                                }
+                            })
+                            .catch((error) => {
+                                console.error("Error retrieving order:", error);
+                            });
+                    } else {
+                        console.error("User not found for the provided email.");
+                    }
+                } else {
+                    console.error("No users found in the database.");
+                }
+            })
+            .catch((error) => {
+                console.error("Error retrieving users:", error);
+            });
+    };
+    // Example usage when the user accepts the order
+    const handleAcceptOrder = (orderId) => {
+        console.log(orderId, userEmail)
+        updateOrderVerified(orderId, true);
+    };
+
+    // Example usage when the user declines the order
+    const handleDeclineOrder = (orderId) => {
+        const email = localStorage.getItem("email")
+        const queryRef = query(ref(database, 'users'), orderByChild('email'), equalTo(email))
+
+
+        get(queryRef)
+            .then((snapshot) => {
+                if (snapshot.exists()) {
+                    const userId = Object.keys(snapshot.val())[0];
+                    const orderRef = ref(database, `users/${userId}/orders/${orderId}`);
+
+                    remove(orderRef)
+                        .then(() => {
+                            console.log('Order deleted successfully.');
+                            setUserEmail("sda")
+
+                        })
+                        .catch((error) => {
+                            console.error('Error deleting order:', error);
+                        });
+                } else {
+                    console.error('User not found for the provided email.');
+                }
+            })
+            .catch((error) => {
+                console.error('Error retrieving user data:', error);
+            });
+    };
     function formatDate(timestamp) {
         const date = new Date(timestamp);
         const day = date.getDate();
@@ -120,6 +276,28 @@ function ViewOrder() {
                         </div>
                     </div>
                 </div>
+                {order.verified ?
+                    (
+                        <div className="flex justify-end p-4">
+                            <button className="bg-green-500 text-white font-medium py-2 px-4 rounded-lg">
+                                Accepted
+                            </button>
+                        </div>
+                    )
+                    :
+                    (
+                        <div className="flex justify-end p-4">
+                            <button className="bg-green-500 text-white font-medium py-2 px-4 rounded-lg mr-2" onClick={() => { handleAcceptOrder(order.id) }}
+                            >
+                                Accept
+                            </button>
+                            <button className="bg-red-500 text-white font-medium py-2 px-4 rounded-lg" onClick={() => { handleDeclineOrder(order.id) }}>
+                                Decline
+                            </button>
+                        </div>
+                    )
+                }
+                {order.pickup && (<div className="text-center bg-blue-200">Delivery Boy Assigned : {order.deliveryBoy}</div>)}
             </div>
         ));
     };

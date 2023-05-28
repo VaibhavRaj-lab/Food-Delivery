@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { ref, set, query, get, orderByChild, equalTo } from 'firebase/database';
 import { auth, database } from '../firebaseConfig';
 import { Navigate, useNavigate } from 'react-router-dom'
@@ -8,12 +8,17 @@ import { Navigate, useNavigate } from 'react-router-dom'
 const LoginPage = () => {
     const [loginVisible, setLoginVisible] = useState(false);
     const [email, setEmail] = useState("");
+    const [resetEmail, setResetEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [fullName, setFullName] = useState("");
+    const [phoneNo, setPhoneNo] = useState("");
+    const [city, setCity] = useState("");
     const [error, setError] = useState("");
     const [userType, setUserType] = useState("")
     const [UserAuthState, setUserAuthState] = useState(true)
     const [errorMessage, setErrorMessage] = useState("");
 
+    const [success, setSuccess] = useState(false);
     const navigate = useNavigate()
     const loginHandler = async (e) => {
         e.preventDefault();
@@ -99,7 +104,11 @@ const LoginPage = () => {
                 console.log("23")
                 await set(ref(database, `users/${uid}`), {
                     email: email,
-                    userType: userType
+                    userType: userType,
+                    name: fullName,
+                    phoneNo: phoneNo,
+                    city: city
+
                 });
                 localStorage.setItem("email", email)
 
@@ -134,7 +143,9 @@ const LoginPage = () => {
         setLoginVisible(false)
         console.log(loginVisible)
     }
-
+    const handleResetPassword = async (e) => {
+        navigate("/resetPassword")
+    };
     return (
         <div style={styles.background}>
             {console.log("32", loginVisible)}
@@ -183,10 +194,42 @@ const LoginPage = () => {
                                     placeholder="Enter Your 8 digit password"
                                 />
                             </div>
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Full Name:</label>
+                                <input
+                                    type="text"
+                                    value={fullName}
+                                    style={styles.input}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    placeholder="Enter Your Full Name"
+                                />
+                            </div>
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Phone Number:</label>
+                                <input
+                                    type="tel"
+                                    value={phoneNo}
+                                    style={styles.input}
+                                    onChange={(e) => setPhoneNo(e.target.value)}
+                                    placeholder="Enter Your Phone Number"
+                                />
+                            </div>
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>City</label>
+                                <input
+                                    type="tel"
+                                    value={city}
+                                    style={styles.input}
+                                    onChange={(e) => setCity(e.target.value)}
+                                    placeholder="Enter Your City"
+                                />
+                            </div>
                             <button type="submit" style={styles.btn}>
                                 Signup
                             </button>
                             <p >Already Registered ? <button style={{ cursor: 'pointer' }} onClick={() => setUserAuthState(true)}>Login</button></p>
+                            <button onClick={handleResetPassword} type="submit" style={{ color: "red" }}>Reset Password</button>
+
                         </form>
                     ) : (
 
@@ -216,10 +259,18 @@ const LoginPage = () => {
                                     placeholder="Enter Your 8 digit password"
                                 />
                             </div>
+
                             <button type="submit" style={styles.btn}>
                                 Sign In
                             </button>
+
+                            {success && <p>Password reset email sent. Check your inbox.</p>}
+                            {error && <p>{error}</p>}
                             <p >New Account ? <button style={{ cursor: 'pointer' }} onClick={() => setUserAuthState(false)}>Register</button></p>
+
+
+                            <button onClick={handleResetPassword} type="submit" style={{ color: "red" }}>Reset Password</button>
+
                         </form>
 
                     )

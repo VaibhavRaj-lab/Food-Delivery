@@ -17,6 +17,8 @@ import Checkout from './components/customer/Checkout';
 import CustomerOrder from './components/customer/CustomerOrder';
 import Footer from './components/Footer';
 import ViewOrder from './components/restautant/ViewOrders';
+import ResetPassword from './components/ResetPassword';
+import EditProfile from './components/EditProfile';
 
 function App() {
   return (
@@ -26,6 +28,7 @@ function App() {
           <Route exact path="/" element={<LoginPage />} />
           <Route exact path="/customerOrder" element={<CustomerOrder />} />
           <Route exact path="/footer" element={<Footer />} />
+          <Route exact path="/resetPassword" element={<ResetPassword />} />
 
           <Route exact path="/customerHeader" element={<CustomerHeader />} />
           <Route exact path="/filter" element={<CategoryFilter />} />
@@ -40,6 +43,7 @@ function App() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/restaurantOrders" element={<ViewOrder />} />
           <Route path="/deliveryBoy" element={<DeliveryBoyComponent />} />
+          <Route path="/editProfile" element={<EditProfile />} />
 
 
           <Route path="/yourRestaurant" element={(
