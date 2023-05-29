@@ -98,6 +98,54 @@ const Checkout = () => {
         setTotalPrice(0);
 
     };
+    const handleFormSubmitCod = async (e) => {
+        e.preventDefault();
+
+        // Submit form data
+        const email = localStorage.getItem("email");
+
+        // Clear form data
+        setFormData({
+            fullName: "",
+            streetNumber: "",
+            streetAddress: "",
+            city: "",
+            state: "",
+            zipCode: "",
+            date: Date.now()
+        });
+
+        const billRef = query(ref(database, 'users'), orderByChild('email'), equalTo(email));
+        const userSnapshot = await get(billRef);
+        const obj = userSnapshot.val();
+        const userId = Object.keys(userSnapshot.val())[0];
+        const userBillRef = child(billRef, `${userId}/orders`);
+
+        // Save the order in the user's orders
+        const orderId = push(userBillRef, { ...formData, cartItems }).key;
+
+        const restaurantEmail = cartItems[0].email;
+        const userQuery = query(ref(database, 'users'), orderByChild('email'), equalTo(restaurantEmail));
+
+        // Retrieve the restaurant's user ID
+        const restaurantSnapshot = await get(userQuery);
+        const restaurantId = Object.keys(restaurantSnapshot.val())[0];
+
+        // Save the order in the restaurant's orders with the same ID
+        const restaurantOrderRef = ref(database, `users/${restaurantId}/orders/${orderId}`);
+        await set(restaurantOrderRef, { cartItems, date: Date.now(), email, restaurantEmail });
+        console.log(cartItems)
+
+
+        navigate("/customerOrder");
+        setErrorMessage("Order Successfull")
+        setError(true);
+
+        // Clear cart items
+        localStorage.removeItem("cartItems");
+        setTotalPrice(0);
+
+    };
 
     const handleCheckout = async () => {
         try {
@@ -227,7 +275,8 @@ const Checkout = () => {
                         <p className="text-sm font-medium">Total</p>
                         <p className="text-sm font-medium">₹ {totalPrice}</p>
                     </div>
-                    <button className="bg-green-500 text-white py-2 px-4 rounded-md mt-4" onClick={handleFormSubmit}>CHECKOUT</button>
+                    <button className="bg-green-500 text-white py-2 px-4 rounded-md mt-4" onClick={handleFormSubmit}>CHECKOUT WITH STRIPE</button>
+                    <button className="bg-blue-500 text-white py-2 px-4 rounded-md mt-4" onClick={handleFormSubmitCod}>CASH ON DELIVERY</button>
 
                     {errorMessage && <div style={{
                         marginTop: "20px",
