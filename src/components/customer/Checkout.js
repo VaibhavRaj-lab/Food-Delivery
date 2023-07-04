@@ -134,11 +134,11 @@ const Checkout = () => {
         // Save the order in the restaurant's orders with the same ID
         const restaurantOrderRef = ref(database, `users/${restaurantId}/orders/${orderId}`);
         await set(restaurantOrderRef, { cartItems, date: Date.now(), email, restaurantEmail });
+        navigate("/customerOrder");
+        setErrorMessage("Order Successfull")
         console.log(cartItems)
 
 
-        navigate("/customerOrder");
-        setErrorMessage("Order Successfull")
         setError(true);
 
         // Clear cart items
